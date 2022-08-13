@@ -15,9 +15,7 @@ type Route struct {
 func main() {
 	godotenv.Load()
 	app := fiber.New()
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.Status(418).SendString("hehe")
-	})
+	app.Static("/", "./view/public")
 	app.Post("/", func(c *fiber.Ctx) error {
 		r := new(Route)
 		if err := c.BodyParser(r); err != nil {
