@@ -15,7 +15,6 @@ import (
 type Route struct {
 	Url   string `json:"url"`
 	Route string `json:"route"`
-	Email string `json:"email"`
 }
 
 func main() {
@@ -53,7 +52,7 @@ func main() {
 		if err := c.BodyParser(r); err != nil {
 			return c.Status(409).JSON(nil)
 		}
-		if r.Email == "" || r.Route == "" || r.Url == "" {
+		if r.Route == "" || r.Url == "" {
 			return c.Status(400).JSON(nil)
 		}
 		collectionRoutes.InsertOne(ctx, r)
