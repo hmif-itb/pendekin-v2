@@ -14,8 +14,8 @@ import (
 )
 
 type Route struct {
-	Src string `form:"src"`
-	Dst string `form:"dst"`
+	Url string `json:"url"`
+	Route string `json:"route"`
 }
 
 func main() {
@@ -54,19 +54,20 @@ func main() {
 			return c.Status(400).SendString(err.Error())
 		}
 		collectionRoutes.InsertOne(ctx, r)
-		return c.Status(201).SendString(fmt.Sprintf("{\n\tsrc: \"%s\",\n\tdst: \"%s\"\n}", r.Src, r.Dst))
+		return c.Status(201).SendString(fmt.Sprintf(
+			"{\n\troute: \"%s\",\n\turl: \"%s\"\n}", r.Route, r.Url))
 	})
 	app.Get("/*", func(c *fiber.Ctx) error {
-		src := c.Params("*")
-		if src == "" {
+		route := c.Params("*")
+		if route == "" {
 			return c.Status(400).SendString("bad route")
 		}
 		var res Route
-		err := collectionRoutes.FindOne(ctx, bson.D{{"src", src}}).Decode(&res)
+		err := collectionRoutes.FindOne(ctx, bson.D{{"route", route}}).Decode(&res)
 		if err != nil {
 			return c.Redirect("/")
 		}
-		return c.Redirect(res.Dst)
+		return c.Redirect(res.Url)
 	})
 
 	// start app
