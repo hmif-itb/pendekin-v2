@@ -45,7 +45,7 @@ func main() {
 	db := client.Database(mongoDb)
 	collectionRoutes := db.Collection("routes")
 
-	// setup web server
+	// setup web server and its handlers
 	app := fiber.New()
 	app.Static("/", "./view/public")
 	app.Post("/", func(c *fiber.Ctx) error {
@@ -61,11 +61,12 @@ func main() {
 		if src == "" {
 			return c.Status(400).SendString("bad route")
 		}
-		fmt.Println(src)
 		var res Route
-		collectionRoutes.FindOne(ctx, bson.D{{"src", src}}).Decode(res)
-		fmt.Println(res)
-		return c.SendString(res.Dst)
+		err := collectionRoutes.FindOne(ctx, bson.D{{"src", src}}).Decode(&res)
+		if err != nil {
+			return c.Redirect("/")
+		}
+		return c.Redirect(res.Dst)
 	})
 
 	// start app
