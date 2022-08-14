@@ -12,22 +12,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const (
-	SUCCESS string = "SUCCESS"
-	FAILED  string = "FAILED"
-)
-
-type (
-	Route struct {
-		Url   string `json:"url"`
-		Route string `json:"route"`
-	}
-
-	BaseResponse struct {
-		Status string      `json:"status"`
-		Data   interface{} `json:"data"`
-	}
-)
+type Route struct {
+	Url   string `json:"url"`
+	Route string `json:"route"`
+	Email string `json:"email"`
+}
 
 func main() {
 	godotenv.Load()
@@ -62,16 +51,13 @@ func main() {
 	app.Post("/", func(c *fiber.Ctx) error {
 		r := new(Route)
 		if err := c.BodyParser(r); err != nil {
-			return c.Status(400).JSON(BaseResponse{
-				Status: FAILED,
-				Data: nil,
-			})
+			return c.Status(409).JSON(nil)
+		}
+		if r.Email == "" || r.Route == "" || r.Url == "" {
+			return c.Status(400).JSON(nil)
 		}
 		collectionRoutes.InsertOne(ctx, r)
-		return c.Status(201).JSON(BaseResponse{
-			Status: SUCCESS,
-			Data: r,
-		})
+		return c.Status(201).JSON(r)
 	})
 	app.Get("/*", func(c *fiber.Ctx) error {
 		route := c.Params("*")
