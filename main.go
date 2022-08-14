@@ -50,12 +50,14 @@ func main() {
 	app.Post("/", func(c *fiber.Ctx) error {
 		r := new(Route)
 		if err := c.BodyParser(r); err != nil {
-			return c.Status(409).JSON(nil)
+			return c.SendStatus(500)
 		}
 		if r.Route == "" || r.Url == "" {
-			return c.Status(400).JSON(nil)
+			return c.SendStatus(400)
 		}
-		collectionRoutes.InsertOne(ctx, r)
+		if _, err := collectionRoutes.InsertOne(ctx, r); err != nil {
+			return c.SendStatus(409)
+		}
 		return c.Status(201).JSON(r)
 	})
 	app.Get("/*", func(c *fiber.Ctx) error {
@@ -64,8 +66,7 @@ func main() {
 			return c.Status(400).SendString("bad route")
 		}
 		var res Route
-		err := collectionRoutes.FindOne(ctx, bson.D{{"route", route}}).Decode(&res)
-		if err != nil {
+		if err := collectionRoutes.FindOne(ctx, bson.D{{"route", route}}).Decode(&res); err != nil {
 			return c.Redirect("/")
 		}
 		return c.Redirect(res.Url)
