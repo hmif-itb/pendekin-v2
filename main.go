@@ -1,10 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Route struct {
@@ -47,14 +53,19 @@ func main() {
 		if err := c.BodyParser(r); err != nil {
 			return c.Status(400).SendString(err.Error())
 		}
-		return c.SendString(fmt.Sprintf("{\n\tsrc: \"%s\",\n\tdst: \"%s\"\n}", r.Src, r.Dst))
+		collectionRoutes.InsertOne(ctx, r)
+		return c.Status(201).SendString(fmt.Sprintf("{\n\tsrc: \"%s\",\n\tdst: \"%s\"\n}", r.Src, r.Dst))
 	})
 	app.Get("/*", func(c *fiber.Ctx) error {
-		route := c.Params("*")
-		if route != "" {
-			return c.SendString(route)
+		src := c.Params("*")
+		if src == "" {
+			return c.Status(400).SendString("bad route")
 		}
-		return c.Status(400).SendString("bad route")
+		fmt.Println(src)
+		var res Route
+		collectionRoutes.FindOne(ctx, bson.D{{"src", src}}).Decode(res)
+		fmt.Println(res)
+		return c.SendString(res.Dst)
 	})
 
 	// start app
