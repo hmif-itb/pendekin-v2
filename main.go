@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"strings"
 
@@ -15,6 +18,40 @@ import (
 type Route struct {
 	Url   string `json:"url"`
 	Route string `json:"route"`
+}
+
+func authUser(ctx context.Context, token string) (bool, error) {
+	// the right way, can't get this to work tho :/
+	// client, err := oauth2.NewService(
+	// 	ctx,
+	// 	option.WithCredentialsFile("secrets.json"),
+	// 	option.WithAudiences("CLIENT_ID"),
+	// 	option.WithScopes())
+	// if err != nil {
+	// 	println(err)
+	// 	return false, err
+	// }
+	// tokenInfoCall := client.Tokeninfo()
+	// tokenInfoCall.IdToken(token)
+	// tokenInfo, err := tokenInfoCall.Do()
+	// if err != nil {
+	// 	println(err)
+	// 	return false, err
+	// }
+	// println(tokenInfo)
+
+	// the wrong way
+	resp, err := http.Get("https://oauth2.googleapis.com/tokeninfo?id_token=" + token)
+	if err != nil {
+		return false, err
+	}
+	bodyRaw, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return false, err
+	}
+	var body map[string]string
+	json.Unmarshal(bodyRaw, &body)
+	return strings.HasSuffix(body["email"], "std.stei.itb.ac.id"), nil
 }
 
 func main() {
@@ -54,6 +91,10 @@ func main() {
 		}
 		if r.Route == "" || r.Url == "" {
 			return c.SendStatus(400)
+		}
+		authorization := strings.Split(c.GetReqHeaders()["Authorization"], " ")[1]
+		if result, err := authUser(ctx, authorization); !result || err != nil {
+			return c.SendStatus(401)
 		}
 		if _, err := collectionRoutes.InsertOne(ctx, r); err != nil {
 			return c.SendStatus(409)
