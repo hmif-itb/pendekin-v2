@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -85,34 +86,51 @@ func main() {
 	app := fiber.New()
 	app.Static("/", "./view/public")
 	app.Post("/", func(c *fiber.Ctx) error {
+		log.Println("[INFO] POST /: called")
+
 		r := new(Route)
 		if err := c.BodyParser(r); err != nil {
+			log.Println("[ERROR] POST /: - ", err)
 			return c.SendStatus(500)
 		}
 		if r.Route == "" || r.Url == "" {
+			log.Println("[ERROR] POST /: empty route")
 			return c.SendStatus(400)
 		}
 		authorization := strings.Split(c.GetReqHeaders()["Authorization"], " ")[1]
 		if result, err := authUser(ctx, authorization); !result || err != nil {
+			if err != nil {
+				log.Println("[ERROR] POST /: can't authorize user - ", err)
+			}
 			return c.SendStatus(401)
 		}
 		if _, err := collectionRoutes.InsertOne(ctx, r); err != nil {
+			if err != nil {
+				log.Println("[ERROR] POST /: can't insert to DB - ", err)
+			}
 			return c.SendStatus(409)
 		}
+
 		return c.Status(201).JSON(r)
 	})
 	app.Get("/*", func(c *fiber.Ctx) error {
+		log.Println("[INFO] GET /*: called")
 		route := c.Params("*")
 		if route == "" {
-			return c.Status(400).SendString("bad route")
+			return c.SendStatus(400)
 		}
 		var res Route
 		if err := collectionRoutes.FindOne(ctx, bson.D{{"route", route}}).Decode(&res); err != nil {
+			log.Println("[ERROR] GET /*: can't find route - ", err)
 			return c.Redirect("/")
 		}
 		return c.Redirect(res.Url)
 	})
 
 	// start app
-	app.Listen(":3000")
+	if err := app.Listen(":3000"); err != nil {
+		log.Panicln("[ERROR] can't start service - ", err)
+	} else {
+		log.Println("[INFO] service started")
+	}
 }
